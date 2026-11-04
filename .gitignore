@@ -1,9 +1,11 @@
 .venv
 .idea
 pdf(sources)
-data/mc_results.csv
+*.pdf
 __pycache__/
 *.py[cod]
 .pytest_cache/
 tables/*_mc_results.csv
-figures/
+figures/*
+!figures/alpha_beta_distribution.png
+!figures/sensitivity.png
