@@ -5,7 +5,7 @@ from lanchester import run_battle
 
 def test_s0_phase1_values():
     params = load_parameters()
-    assert params['S0_phase1'] == (16000, 17000, 17000), "S0_phase1 values are incorrect"
+    assert params['S0_attack'] == (16000, 17000, 17000), "S0_attack values are incorrect"
 
 def test_input_values():
     params = load_parameters('input')
@@ -14,7 +14,7 @@ def test_input_values():
 def test_validation_values():
     params = load_parameters('validation')
     assert 'val_Lr_killed' in params, "val_Lr_killed should be present in validation parameters"
-    assert 'S0_phase1' not in params, "S0_phase1 should not be present in validation parameters"
+    assert 'S0_attack' not in params, "S0_attack should not be present in validation parameters"
 
 def test_nan_values():
     params = load_parameters()['A_R']
