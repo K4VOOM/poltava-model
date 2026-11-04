@@ -37,6 +37,16 @@ def run_battle(
       trajectory: included only when return_trajectory is True; arrays of
                   solver time points and corresponding S and R strengths
     """
+    if not np.isfinite(alpha) or not np.isfinite(beta) or alpha <= 0 or beta <= 0:
+        raise ValueError("alpha and beta must be finite and greater than zero")
+    if (
+        not np.isfinite(artillery_S)
+        or not np.isfinite(artillery_R)
+        or artillery_S < 0
+        or artillery_R < 0
+    ):
+        raise ValueError("artillery rates must be finite and non-negative")
+
     if stop_fraction is None:
         S_stop = R_stop = threshold
     else:
@@ -64,16 +74,20 @@ def run_battle(
     k = np.sqrt(alpha * beta)
     t_max = (np.log(max(S0 / S_stop, R0 / R_stop)) + 40) / k
 
-    sol = solve_ivp(
-        rhs, (0, t_max), [S0, R0],
-        args=(alpha, beta, artillery_S, artillery_R),
-        events=(s_dead, r_dead),
-        rtol=1e-8, atol=1e-8,
-    )
-
-    # status 1 means a terminal event fired; anything else is not a finished battle
-    if sol.status != 1:
-        raise RuntimeError(f"Battle did not finish: {sol.message}")
+    for _ in range(8):
+        sol = solve_ivp(
+            rhs, (0, t_max), [S0, R0],
+            args=(alpha, beta, artillery_S, artillery_R),
+            events=(s_dead, r_dead),
+            rtol=1e-8, atol=1e-8,
+        )
+        if sol.status == 1:
+            break
+        if sol.status < 0:
+            raise RuntimeError(f"Battle integration failed: {sol.message}")
+        t_max *= 2
+    else:
+        raise RuntimeError(f"Battle did not finish after extending the time horizon: {sol.message}")
 
     S_end, R_end = sol.y[:, -1]
     t_end = sol.t[-1]

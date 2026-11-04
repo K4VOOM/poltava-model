@@ -28,7 +28,7 @@ def _plot_distributions(poltava, narva, path):
     fig, axes = plt.subplots(1, 2, figsize=(10, 4))
     for ax, values, title in (
         (axes[0], poltava["alpha_beta"], "Полтава, 1709"),
-        (axes[1], narva["alpha_beta"], "Нарва, 1700"),
+        (axes[1], narva["alpha_beta"], "Нарва, 1700 (варіюється лише Lₛ)"),
     ):
         ax.hist(values, bins=40, density=True, alpha=0.75)
         ax.axvline(values.median(), color="darkred", linestyle="--", label=f"Медіана {values.median():.2f}")

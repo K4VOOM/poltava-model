@@ -1,5 +1,8 @@
 import math
+from types import SimpleNamespace
+
 import pytest
+import lanchester
 from lanchester import rhs, run_battle
 
 def test_run_battle_s_wins():
@@ -42,6 +45,31 @@ def test_artillery_can_change_battle_and_return_trajectory():
     assert result["trajectory"]["time"][-1] == pytest.approx(result["time"])
     assert result["trajectory"]["S"][-1] == pytest.approx(result["S_end"])
     assert result["trajectory"]["R"][-1] == pytest.approx(result["R_end"])
+
+
+def test_artillery_rates_must_be_finite_and_non_negative():
+    with pytest.raises(ValueError, match="non-negative"):
+        run_battle(100, 80, 0.5, 0.3, artillery_S=-1)
+    with pytest.raises(ValueError, match="finite"):
+        run_battle(100, 80, 0.5, 0.3, artillery_R=math.inf)
+
+
+def test_battle_extends_time_horizon_if_no_stop_event_fires(monkeypatch):
+    solve_ivp = lanchester.solve_ivp
+    time_spans = []
+
+    def miss_first_horizon(*args, **kwargs):
+        time_spans.append(args[1][1])
+        if len(time_spans) == 1:
+            return SimpleNamespace(status=0, message="time horizon reached")
+        return solve_ivp(*args, **kwargs)
+
+    monkeypatch.setattr(lanchester, "solve_ivp", miss_first_horizon)
+    result = run_battle(100, 80, 0.5, 0.3, artillery_S=2, artillery_R=1)
+
+    assert len(time_spans) == 2
+    assert time_spans[1] == 2 * time_spans[0]
+    assert result["time"] > 0
 
 
 def test_run_battle_raises_when_side_not_above_threshold():
