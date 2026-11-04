@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
@@ -62,3 +64,21 @@ def run_calibration_mc(params, n, seed):
         for S0, R0, S_end, R_end in zip(table["S0"], table["R0"], table["S_end"], table["R_end"])
     ]
     return table
+
+
+def summarize_alpha_beta(table):
+    """Median, mean and the 5th/95th percentiles of the alpha/beta column."""
+    ratio = table["alpha_beta"]
+    return {
+        "median": float(ratio.median()),
+        "mean": float(ratio.mean()),
+        "p5": float(ratio.quantile(0.05)),
+        "p95": float(ratio.quantile(0.95)),
+    }
+
+
+def save_results(table, path):
+    """Write the table to a CSV file, creating the folder if needed."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    table.to_csv(path, index=False)

@@ -1,10 +1,11 @@
 import math
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from data_loader import load_parameters
-from montecarlo import run_calibration_mc, sample_parameters, sample_triangular
+from montecarlo import run_calibration_mc, sample_parameters, sample_triangular, save_results, summarize_alpha_beta
 
 
 def test_triangular_within_bounds_and_mean():
@@ -106,3 +107,32 @@ def test_calibration_mc_degenerate_inputs_give_known_ratio():
 
     # (R0^2 - R_end^2) / (S0^2 - S_end^2) with S_end = 6227, R_end = 38025
     assert table["alpha_beta"].tolist() == pytest.approx([1.495] * 5, abs=0.001), "ratio at the likely values"
+
+
+def test_summarize_alpha_beta_known_values():
+    table = pd.DataFrame({"alpha_beta": [1.0, 2.0, 3.0, 4.0, 5.0]})
+
+    summary = summarize_alpha_beta(table)
+
+    assert summary["median"] == pytest.approx(3.0), "median of 1..5 is 3"
+    assert summary["mean"] == pytest.approx(3.0), "mean of 1..5 is 3"
+    assert summary["p5"] == pytest.approx(1.2), "5th percentile of 1..5 is 1.2"
+    assert summary["p95"] == pytest.approx(4.8), "95th percentile of 1..5 is 4.8"
+
+
+def test_save_results_round_trip(tmp_path):
+    table = run_calibration_mc(load_parameters(), 50, seed=3)
+    path = tmp_path / "mc.csv"
+
+    save_results(table, path)
+
+    pd.testing.assert_frame_equal(pd.read_csv(path), table, check_exact=False)
+
+
+def test_save_results_creates_missing_folder(tmp_path):
+    table = pd.DataFrame({"alpha_beta": [1.0]})
+    path = tmp_path / "new" / "deeper" / "mc.csv"
+
+    save_results(table, path)
+
+    assert path.exists(), "the missing folders must be created"
