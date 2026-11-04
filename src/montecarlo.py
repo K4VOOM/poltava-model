@@ -37,25 +37,29 @@ def sample_parameters(params, n, seed, names=None):
 
 
 CALIBRATION_NAMES = ["S0_attack", "R0_engaged", "val_Ls_killed_captured", "val_Lr_killed_wounded"]
+NARVA_CALIBRATION_NAMES = ["S0_narva", "R0_narva", "val_Ls_narva", "val_Lr_narva"]
 
 
-def run_calibration_mc(params, n, seed):
+def run_calibration_mc(params, n, seed, parameter_names=CALIBRATION_NAMES):
     """Monte Carlo for the alpha/beta ratio.
 
     Each run draws the initial strengths (S0, R0) and the losses (Ls, Lr) from
     their triangular distributions, turns them into end-of-battle strengths and
     calibrates alpha/beta from the conserved quantity (calibration.py).
-    The four inputs are drawn independently.
+    The four inputs are drawn independently. `parameter_names` selects the
+    corresponding initial-strength and loss parameters for a particular battle.
 
     Returns a DataFrame with n rows: S0, R0, Ls, Lr, S_end, R_end, alpha_beta.
     """
-    s = sample_parameters(params, n, seed, names=CALIBRATION_NAMES)
+    if len(parameter_names) != 4:
+        raise ValueError("parameter_names must contain S0, R0, Ls and Lr parameter names")
+    s = sample_parameters(params, n, seed, names=parameter_names)
 
     table = pd.DataFrame({
-        "S0": s["S0_attack"],
-        "R0": s["R0_engaged"],
-        "Ls": s["val_Ls_killed_captured"],
-        "Lr": s["val_Lr_killed_wounded"],
+        "S0": s[parameter_names[0]],
+        "R0": s[parameter_names[1]],
+        "Ls": s[parameter_names[2]],
+        "Lr": s[parameter_names[3]],
     })
     table["S_end"] = table["S0"] - table["Ls"]
     table["R_end"] = table["R0"] - table["Lr"]

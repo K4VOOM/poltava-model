@@ -5,7 +5,14 @@ import pandas as pd
 import pytest
 
 from data_loader import load_parameters
-from montecarlo import run_calibration_mc, sample_parameters, sample_triangular, save_results, summarize_alpha_beta
+from montecarlo import (
+    NARVA_CALIBRATION_NAMES,
+    run_calibration_mc,
+    sample_parameters,
+    sample_triangular,
+    save_results,
+    summarize_alpha_beta,
+)
 
 
 def test_triangular_within_bounds_and_mean():
@@ -107,6 +114,15 @@ def test_calibration_mc_degenerate_inputs_give_known_ratio():
 
     # (R0^2 - R_end^2) / (S0^2 - S_end^2) with S_end = 6227, R_end = 38025
     assert table["alpha_beta"].tolist() == pytest.approx([1.495] * 5, abs=0.001), "ratio at the likely values"
+
+
+def test_narva_parameters_calibrate_separately_from_poltava():
+    params = load_parameters()
+
+    narva = run_calibration_mc(params, 100, seed=1, parameter_names=NARVA_CALIBRATION_NAMES)
+    poltava = run_calibration_mc(params, 100, seed=1)
+
+    assert (narva["alpha_beta"] > poltava["alpha_beta"].median()).all()
 
 
 def test_summarize_alpha_beta_known_values():
