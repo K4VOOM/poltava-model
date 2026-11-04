@@ -2,3 +2,7 @@
 .idea
 pdf(sources)
 data/mc_results.csv
+__pycache__/
+*.py[cod]
+.pytest_cache/
+tables/*_mc_results.csv
