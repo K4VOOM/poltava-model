@@ -1,4 +1,7 @@
 import numpy as np
+import pandas as pd
+
+from calibration import ratio_alpha_beta
 
 
 def sample_triangular(low, likely, high, n, rng):
@@ -29,3 +32,33 @@ def sample_parameters(params, n, seed, names=None):
     if names is None:
         names = list(params)
     return {name: sample_triangular(*params[name], n, rng) for name in names}
+
+
+CALIBRATION_NAMES = ["S0_attack", "R0_engaged", "val_Ls_killed_captured", "val_Lr_killed_wounded"]
+
+
+def run_calibration_mc(params, n, seed):
+    """Monte Carlo for the alpha/beta ratio.
+
+    Each run draws the initial strengths (S0, R0) and the losses (Ls, Lr) from
+    their triangular distributions, turns them into end-of-battle strengths and
+    calibrates alpha/beta from the conserved quantity (calibration.py).
+    The four inputs are drawn independently.
+
+    Returns a DataFrame with n rows: S0, R0, Ls, Lr, S_end, R_end, alpha_beta.
+    """
+    s = sample_parameters(params, n, seed, names=CALIBRATION_NAMES)
+
+    table = pd.DataFrame({
+        "S0": s["S0_attack"],
+        "R0": s["R0_engaged"],
+        "Ls": s["val_Ls_killed_captured"],
+        "Lr": s["val_Lr_killed_wounded"],
+    })
+    table["S_end"] = table["S0"] - table["Ls"]
+    table["R_end"] = table["R0"] - table["Lr"]
+    table["alpha_beta"] = [
+        ratio_alpha_beta(S0, R0, S_end, R_end)
+        for S0, R0, S_end, R_end in zip(table["S0"], table["R0"], table["S_end"], table["R_end"])
+    ]
+    return table
