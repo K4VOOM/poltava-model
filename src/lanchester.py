@@ -2,12 +2,22 @@ import numpy as np
 from scipy.integrate import solve_ivp
 
 
-def rhs(t, y, alpha, beta):
+def rhs(t, y, alpha, beta, artillery_S=0.0, artillery_R=0.0):
     S, R = y
-    return [-beta * R, -alpha * S]
+    return [-beta * R - artillery_R, -alpha * S - artillery_S]
 
 
-def run_battle(S0, R0, alpha, beta, threshold=1.0, stop_fraction=None):
+def run_battle(
+    S0,
+    R0,
+    alpha,
+    beta,
+    threshold=1.0,
+    stop_fraction=None,
+    artillery_S=0.0,
+    artillery_R=0.0,
+    return_trajectory=False,
+):
     """Lanchester square-law battle.
 
     Stopping rule:
@@ -15,11 +25,17 @@ def run_battle(S0, R0, alpha, beta, threshold=1.0, stop_fraction=None):
       * stop_fraction = f (0 < f < 1): runs until one side drops to f * its
         initial size (rout threshold).
 
+    artillery_S and artillery_R are additional constant casualty rates
+    (people per model-time unit) caused by each side's artillery fire.
+    They default to zero, which gives the original Lanchester model.
+
     Returns a dict:
       winner    : "S", "R" or "draw"
       remaining : survivors on the winning side (on a draw, the level at stop time)
       time      : time at which the battle ended
       S_end, R_end : strengths of both sides at the end of the battle
+      trajectory: included only when return_trajectory is True; arrays of
+                  solver time points and corresponding S and R strengths
     """
     if stop_fraction is None:
         S_stop = R_stop = threshold
@@ -32,10 +48,10 @@ def run_battle(S0, R0, alpha, beta, threshold=1.0, stop_fraction=None):
         raise ValueError("S0 and R0 must be greater than threshold")
 
     # solve_ivp passes `args` to events too, so they need the same signature as rhs
-    def s_dead(t, y, alpha, beta):
+    def s_dead(t, y, alpha, beta, artillery_S, artillery_R):
         return y[0] - S_stop
 
-    def r_dead(t, y, alpha, beta):
+    def r_dead(t, y, alpha, beta, artillery_S, artillery_R):
         return y[1] - R_stop
 
     for ev in (s_dead, r_dead):
@@ -50,7 +66,7 @@ def run_battle(S0, R0, alpha, beta, threshold=1.0, stop_fraction=None):
 
     sol = solve_ivp(
         rhs, (0, t_max), [S0, R0],
-        args=(alpha, beta),
+        args=(alpha, beta, artillery_S, artillery_R),
         events=(s_dead, r_dead),
         rtol=1e-8, atol=1e-8,
     )
@@ -62,20 +78,29 @@ def run_battle(S0, R0, alpha, beta, threshold=1.0, stop_fraction=None):
     S_end, R_end = sol.y[:, -1]
     t_end = sol.t[-1]
 
-    # Winner: the side whose stopping event did NOT fire. A draw is only
-    # possible when the conserved quantity alpha*S^2 - beta*R^2 is (almost) 0.
+    # Keep the original draw rule for the unmodified model. Constant artillery
+    # losses break its conserved quantity, so use the stopping events instead.
     Q = alpha * S0**2 - beta * R0**2
-    if abs(Q) <= 1e-9 * (alpha * S0**2 + beta * R0**2):
+    if artillery_S == 0.0 and artillery_R == 0.0 and abs(Q) <= 1e-9 * (alpha * S0**2 + beta * R0**2):
+        winner, remaining = "draw", max(S_end, R_end)
+    elif len(sol.t_events[0]) > 0 and len(sol.t_events[1]) > 0:
         winner, remaining = "draw", max(S_end, R_end)
     elif len(sol.t_events[0]) > 0:      # S hit its stop level -> R won
         winner, remaining = "R", R_end
     else:                               # R hit its stop level -> S won
         winner, remaining = "S", S_end
 
-    return {
+    result = {
         "winner": winner,
         "remaining": float(remaining),
         "time": float(t_end),
         "S_end": float(S_end),
         "R_end": float(R_end),
     }
+    if return_trajectory:
+        result["trajectory"] = {
+            "time": sol.t.copy(),
+            "S": sol.y[0].copy(),
+            "R": sol.y[1].copy(),
+        }
+    return result

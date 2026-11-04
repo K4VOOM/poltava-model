@@ -1,6 +1,6 @@
 import math
 import pytest
-from lanchester import run_battle
+from lanchester import rhs, run_battle
 
 def test_run_battle_s_wins():
     result = run_battle(100, 80, 0.5, 0.3)
@@ -17,6 +17,32 @@ def test_run_battle_r_wins_mirror_case():
 def test_run_battle_draw():
     result = run_battle(100, 100, 0.5, 0.5)
     assert result["winner"] == "draw"
+
+
+def test_artillery_zero_preserves_original_result():
+    original = run_battle(100, 80, 0.5, 0.3)
+    with_zero_artillery = run_battle(100, 80, 0.5, 0.3, artillery_S=0, artillery_R=0)
+
+    assert with_zero_artillery == original
+
+
+def test_rhs_includes_artillery_fire_as_additional_losses():
+    assert rhs(0, [100, 80], 0.5, 0.3, artillery_S=2, artillery_R=1) == [-25, -52]
+
+
+def test_artillery_can_change_battle_and_return_trajectory():
+    result = run_battle(
+        100, 80, 0.5, 0.3, artillery_S=2, artillery_R=100, return_trajectory=True
+    )
+
+    assert result["winner"] == "R"
+    assert result["trajectory"]["time"][0] == 0
+    assert result["trajectory"]["S"][0] == 100
+    assert result["trajectory"]["R"][0] == 80
+    assert result["trajectory"]["time"][-1] == pytest.approx(result["time"])
+    assert result["trajectory"]["S"][-1] == pytest.approx(result["S_end"])
+    assert result["trajectory"]["R"][-1] == pytest.approx(result["R_end"])
+
 
 def test_run_battle_raises_when_side_not_above_threshold():
     with pytest.raises(ValueError, match="greater than threshold"):
