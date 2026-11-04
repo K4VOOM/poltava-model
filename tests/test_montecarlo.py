@@ -47,7 +47,7 @@ def test_same_seed_same_numbers_different_seed_different_numbers():
 
 def test_sample_parameters_from_csv():
     params = load_parameters("input")
-    names = ["S0_phase1", "R0_engaged", "G_S"]
+    names = ["S0_attack", "R0_engaged", "G_S"]
 
     sample = sample_parameters(params, 1000, seed=42, names=names)
 
