@@ -59,6 +59,8 @@ python src/main.py
 
 ![Кореляційна чутливість α/β](figures/sensitivity.png)
 
+![Траєкторія бою за моделлю Ланчестера](figures/battle_trajectory.png)
+
 ## Основні припущення й обмеження
 
 Повний перелік — у `notes/assumptions.md`. Коротко:

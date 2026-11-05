@@ -9,3 +9,4 @@ tables/*_mc_results.csv
 figures/*
 !figures/alpha_beta_distribution.png
 !figures/sensitivity.png
+!figures/battle_trajectory.png
